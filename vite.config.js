@@ -3,6 +3,7 @@ import vue from '@vitejs/plugin-vue'
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: '/tectnoic_setting_discrimination_front/',
   plugins: [vue()],
   publicDir: 'public',
   server: {
