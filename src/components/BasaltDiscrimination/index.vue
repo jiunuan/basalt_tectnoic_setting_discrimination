@@ -21,12 +21,7 @@
             <h3>{{ t('welcome.title') }}</h3>
             <p>{{ t('welcome.description') }}</p>
             <div class="start-button-container">
-              <el-button 
-                type="primary" 
-                size="large" 
-                class="start-button pulse-button"
-                @click="showUploadDialog = true"
-              >
+              <el-button type="primary" size="large" class="start-button pulse-button" @click="showUploadDialog = true">
                 <i class="el-icon-upload" />
                 {{ t('welcome.startButton') }}
                 <div class="button-effect"></div>
@@ -56,7 +51,8 @@
         </div>
       </div>
 
-      <data-display v-else :table-data="fileData" :predictions="results" :predicting="predicting" @download="downloadResults" @predict="handlePredict" />
+      <data-display v-else :table-data="fileData" :predictions="results" :predicting="predicting"
+        @download="downloadResults" @predict="handlePredict" />
     </el-card>
   </div>
 </template>
@@ -112,14 +108,14 @@ tf.serialization.registerClass(L2Regularizer)
 // 加载模型
 const loadModel = async () => {
   try {
-    const modelResponse = await fetch('/model/model.json')
+    const modelResponse = await fetch('./model/model.json')
     if (!modelResponse.ok) {
       throw new Error(`HTTP error! status: ${modelResponse.status}`)
     }
     const modelJSON = await modelResponse.json()
     console.log('model.json 内容:', modelJSON)
 
-    model = await tf.loadLayersModel('/model/model.json');
+    model = await tf.loadLayersModel('./model/model.json');
     console.log('模型加载成功')
   } catch (error) {
     console.error('模型加载失败:', error)
@@ -147,17 +143,22 @@ const handlePredict = async () => {
     ElMessage.error(t('message.modelNotLoaded'))
     return
   }
-  
+  ElMessage({
+    message: t('preview.predicting'),
+    type: 'info',
+    duration: 0
+  })
   predicting.value = true
   try {
     // 获取原始数据并标准化
-    const originalData = fileData.value.map(row => 
+    const originalData = fileData.value.map(row =>
       COLUMNS_TO_EXTRACT.map(col => row['col' + COLUMNS_TO_EXTRACT.indexOf(col)])
     )
     const normalizedData = await processData(originalData)
     const imageData = convertToImageArray(normalizedData)
-  
+
     await makePredictions(imageData)
+    ElMessage.closeAll()
   } catch (error) {
     console.error('预测过程出错:', error)
     ElMessage.error(t('message.predictFail'))
@@ -439,7 +440,7 @@ const goHome = () => {
   left: 0;
   width: 100%;
   height: 100%;
-  background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0) 60%);
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0) 60%);
   opacity: 0;
   transition: opacity 0.3s ease;
 }
@@ -452,9 +453,11 @@ const goHome = () => {
   0% {
     box-shadow: 0 0 0 0 rgba(64, 158, 255, 0.4);
   }
+
   70% {
     box-shadow: 0 0 0 15px rgba(64, 158, 255, 0);
   }
+
   100% {
     box-shadow: 0 0 0 0 rgba(64, 158, 255, 0);
   }

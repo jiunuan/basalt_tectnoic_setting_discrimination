@@ -36,7 +36,7 @@ function normalizeValue(val, columnQuantiles) {
 async function normalizeData(data, columns) {
     try {
         // 从public/model目录加载分位数文件
-        const response = await fetch('/model/saved_quantiles.json');
+        const response = await fetch('./model/saved_quantiles.json');
         const quantiles = await response.json();
 
         // 对每一行数据进行标准化
@@ -64,25 +64,3 @@ export {
     normalizeData,
     normalizeValue
 };
-
-/* 使用示例：
-在 Vue 组件中：
-
-import { normalizeData } from './normalize.js';
-
-// 定义列名数组（必须与分位数JSON中的键名完全匹配）
-const columns = [
-    "NA2O(WT%)", "MGO(WT%)", "AL2O3(WT%)", "SIO2(WT%)", 
-    "P2O5(WT%)", "K2O(WT%)", "CAO(WT%)", "TIO2(WT%)", 
-    "MNO(WT%)", "FEOT(WT%)", ...
-];
-
-async function processData() {
-    try {
-        const normalizedData = await normalizeData(this.rawData, columns);
-        this.processedData = normalizedData;
-    } catch (error) {
-        console.error('数据标准化失败:', error);
-    }
-}
-*/
