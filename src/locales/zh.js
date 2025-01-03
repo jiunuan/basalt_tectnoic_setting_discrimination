@@ -13,8 +13,10 @@ export default {
     empty: '暂无数据',
     predict: '开始预测',
     predicting: '预测中...',
+    process: '处理数据',
     download: '下载结果',
-    count: '数量'
+    count: '数量',
+    currentFile: '当前文件'
   },
   charts: {
     distribution: '构造环境分布',
@@ -41,7 +43,18 @@ export default {
     predictFail: '预测失败，请重试',
     uploadSuccess: '文件上传成功',
     uploadFail: '文件处理失败，请检查文件格式和必要的列是否存在',
-    uploadError: '文件读取失败'
+    uploadError: '文件读取失败',
+    noValidData: '筛选后没有有效数据（缺失值过多）',
+    dataFiltered: '共处理{total}个样本：{invalid}个无效，{duplicate}个重复，剩余{remaining}个',
+    duplicatesFiltered: '已移除{count}个重复样本',
+    noData: '没有可处理的数据',
+    processing: '正在处理数据...',
+    processSuccess: '数据处理完成',
+    processFail: '数据处理失败',
+    processDataFirst: '请先处理数据再进行预测',
+    noResults: '没有可下载的预测结果',
+    downloadSuccess: '结果下载成功',
+    downloadFail: '结果下载失败'
   },
   welcome: {
     title: '欢迎使用玄武岩构造环境判别系统',

@@ -74,16 +74,27 @@ npm run build
 2. Upload data file:
    - Click the "Get Started" button
    - Drag and drop your file or click to select
-   - System will automatically validate the data format
+   - System will automatically validate the file format
 
-3. Prediction and analysis:
-   - Review data preview to confirm accuracy
+3. Data preprocessing:
+   - Review data preview to confirm data format
+   - Click "Process Data" button to:
+     * Remove duplicate samples
+     * Normalize data values
+     * Prepare data for prediction
+   - System will display preprocessing statistics
+
+4. Prediction and analysis:
+   - After data preprocessing is complete
    - Click "Predict" button to start analysis
    - System will display prediction results and visualizations
 
-4. Export results:
+5. Export results:
    - Click "Download Results" button
-   - System will generate a CSV file containing original data and predictions
+   - System will generate a CSV file containing:
+     * Original data
+     * Preprocessing results
+     * Prediction results
 
 ## Supported Tectonic Settings
 

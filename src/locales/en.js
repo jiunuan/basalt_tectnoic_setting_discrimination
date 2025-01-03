@@ -13,8 +13,10 @@ export default {
     empty: 'No data available',
     predict: 'Predict',
     predicting: 'Predicting...',
+    process: 'Process Data',
     download: 'Download Results',
-    count: 'Count'
+    count: 'Count',
+    currentFile: 'Current File'
   },
   charts: {
     distribution: 'Distribution of Tectonic Settings',
@@ -41,7 +43,18 @@ export default {
     predictFail: 'Prediction failed, please try again',
     uploadSuccess: 'File uploaded successfully',
     uploadFail: 'File processing failed, please check the file format and required columns',
-    uploadError: 'File reading failed'
+    uploadError: 'File reading failed',
+    noValidData: 'No valid data after filtering (too many missing values)',
+    dataFiltered: '{total} samples processed: {invalid} invalid, {duplicate} duplicates, {remaining} remaining',
+    duplicatesFiltered: '{count} duplicate samples were removed',
+    noData: 'No data available for processing',
+    processing: 'Processing data...',
+    processSuccess: 'Data processing completed',
+    processFail: 'Data processing failed',
+    processDataFirst: 'Please process the data before prediction',
+    noResults: 'No prediction results available for download',
+    downloadSuccess: 'Results downloaded successfully',
+    downloadFail: 'Failed to download results'
   },
   welcome: {
     title: 'Welcome to Basalt Tectonic Setting Discrimination System',

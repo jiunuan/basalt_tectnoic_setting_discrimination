@@ -51,8 +51,18 @@
         </div>
       </div>
 
-      <data-display v-else :table-data="fileData" :predictions="results" :predicting="predicting"
-        @download="downloadResults" @predict="handlePredict" />
+      <data-display 
+        v-else 
+        :table-data="fileData" 
+        :predictions="results" 
+        :predicting="predicting"
+        :processing="processing"
+        :processed-data="processedData"
+        :filename="currentFileName"
+        @download="downloadResults" 
+        @predict="handlePredict"
+        @process="handleProcessData"
+      />
     </el-card>
   </div>
 </template>
@@ -128,7 +138,10 @@ onMounted(async () => {
   // console.log(model)
 })
 
-const handleFileProcessed = async (data) => {
+const currentFileName = ref('')
+
+const handleFileProcessed = async (data, filename) => {
+  currentFileName.value = filename
   fileData.value = data.map(row => {
     const rowData = {}
     row.forEach((val, index) => {
@@ -143,20 +156,15 @@ const handlePredict = async () => {
     ElMessage.error(t('message.modelNotLoaded'))
     return
   }
-  ElMessage({
-    message: t('preview.predicting'),
-    type: 'info',
-    duration: 0
-  })
+  
   predicting.value = true
   try {
-    // 获取原始数据并标准化
-    const originalData = fileData.value.map(row =>
-      COLUMNS_TO_EXTRACT.map(col => row['col' + COLUMNS_TO_EXTRACT.indexOf(col)])
-    )
-    const normalizedData = await processData(originalData)
-    const imageData = convertToImageArray(normalizedData)
+    if (!processedData.value) {
+      ElMessage.error(t('message.processDataFirst'))
+      return
+    }
 
+    const imageData = convertToImageArray(processedData.value)
     await makePredictions(imageData)
     ElMessage.closeAll()
   } catch (error) {
@@ -164,6 +172,127 @@ const handlePredict = async () => {
     ElMessage.error(t('message.predictFail'))
   } finally {
     predicting.value = false
+  }
+}
+
+// 添加数据筛选函数
+const filterData = (data) => {
+  // 存储已经出现过的数据的哈希值
+  const seen = new Set()
+  let duplicateCount = 0
+  let invalidCount = 0
+  
+  const filteredData = data.filter((sample, index) => {
+    // 检查无效值
+    // const zeroCount = sample.filter(val => val === 0 || val === null || isNaN(val)).length
+    // if (zeroCount > 16) {
+    //   console.log(`样本 ${index + 1} 有 ${zeroCount} 个无效值，已被过滤`)
+    //   invalidCount++
+    //   return false
+    // }
+    
+    // 检查重复值
+    const sampleHash = sample.join(',')
+    if (seen.has(sampleHash)) {
+      console.log(`样本 ${index + 1} 是重复数据，已被过滤`)
+      duplicateCount++
+      return false
+    }
+    
+    seen.add(sampleHash)
+    return true
+  })
+
+  // 如果有重复数据被过滤，显示提示信息
+  if (duplicateCount > 0) {
+    ElMessage({
+      message: t('message.duplicatesFiltered', {
+        count: duplicateCount
+      }),
+      type: 'warning',
+      duration: 3000
+    })
+  }
+
+  return {
+    data: filteredData,
+    stats: {
+      total: data.length,
+      invalid: invalidCount,
+      duplicate: duplicateCount,
+      remaining: filteredData.length
+    }
+  }
+}
+
+const processedData = ref(null)
+const processing = ref(false)
+
+// 添加数据处理函数
+const handleProcessData = async () => {
+  if (!fileData.value.length) {
+    ElMessage.error(t('message.noData'))
+    return
+  }
+
+  processing.value = true
+  const loadingMessage = ElMessage({
+    message: t('message.processing'),
+    type: 'info',
+    duration: 0
+  })
+
+  try {
+    // 获取原始数据
+    const originalData = fileData.value.map(row =>
+      COLUMNS_TO_EXTRACT.map(col => row['col' + COLUMNS_TO_EXTRACT.indexOf(col)])
+    )
+
+    // 先进行数据筛选
+    const { data: filteredData, stats } = filterData(originalData)
+
+    // 检查筛选结果
+    if (filteredData.length === 0) {
+      loadingMessage.close()
+      ElMessage.error(t('message.noValidData'))
+      return
+    }
+
+    // 显示筛选结果
+    if (stats.invalid > 0 || stats.duplicate > 0) {
+      ElMessage({
+        message: t('message.dataFiltered', {
+          total: stats.total,
+          invalid: stats.invalid,
+          duplicate: stats.duplicate,
+          remaining: stats.remaining
+        }),
+        type: 'warning',
+        duration: 3000
+      })
+    }
+
+    // 对筛选后的数据进行标准化
+    const normalizedData = await processData(filteredData)
+    processedData.value = normalizedData
+
+    // 更新表格数据，显示处理后的数据
+    fileData.value = filteredData.map((row, index) => {
+      const rowData = {}
+      row.forEach((val, colIndex) => {
+        rowData['col' + colIndex] = val
+      })
+      return rowData
+    })
+
+    loadingMessage.close()
+    ElMessage.success(t('message.processSuccess'))
+  } catch (error) {
+    console.error('数据处理错误:', error)
+    loadingMessage.close()
+    ElMessage.error(t('message.processFail'))
+  } finally {
+    processing.value = false
   }
 }
 
@@ -222,10 +351,6 @@ const makePredictions = async (data) => {
     // 进行预测
     const predictions = await model.predict(inputData)
     const predictionArray = await predictions.array()
-    ElMessage({
-      message: t('message.predictSuccess'),
-      type: 'success'
-    })
 
     // 更新预测结果
     results.value = predictionArray.map(pred => getTectonicSetting(pred))
@@ -239,8 +364,16 @@ const makePredictions = async (data) => {
     // 清理张量
     inputData.dispose()
     predictions.dispose()
+
+    // 显示成功消息
+    ElMessage({
+      message: t('message.predictSuccess'),
+      type: 'success',
+      duration: 3000
+    })
   } catch (error) {
     console.error('预测过程出错:', error)
+    ElMessage.error(t('message.predictFail'))
   }
 }
 
@@ -253,26 +386,59 @@ const getTectonicSetting = (prediction) => {
 
 // 添加下载结果函数
 const downloadResults = () => {
-  const headers = [...COLUMNS_TO_EXTRACT, '预测结果']
-  const csvContent = [
-    headers.join(','),
-    ...fileData.value.map(row => {
-      const values = COLUMNS_TO_EXTRACT.map(col => row[col])
-      return [...values, row.prediction].join(',')
-    })
-  ].join('\n')
+  if (!results.value.length) {
+    ElMessage.error(t('message.noResults'))
+    return
+  }
 
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-  const link = document.createElement('a')
-  link.href = URL.createObjectURL(blob)
-  link.download = t('title') + '.csv'
-  link.click()
+  try {
+    // 准备CSV数据
+    const csvContent = []
+    
+    // 添加表头
+    const headers = [...COLUMNS_TO_EXTRACT, 'Predicted_Setting']
+    csvContent.push(headers.join(','))
+
+    // 添加数据行
+    fileData.value.forEach((row, index) => {
+      const rowData = COLUMNS_TO_EXTRACT.map(col => 
+        row['col' + COLUMNS_TO_EXTRACT.indexOf(col)]
+      )
+      rowData.push(results.value[index])
+      csvContent.push(rowData.join(','))
+    })
+
+    // 创建Blob对象
+    const blob = new Blob([csvContent.join('\n')], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    
+    // 设置下载文件名
+    const date = new Date().toISOString().slice(0, 10)
+    link.setAttribute('href', url)
+    link.setAttribute('download', `tectonic_predictions_${date}.csv`)
+    
+    // 触发下载
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+
+    ElMessage.success(t('message.downloadSuccess'))
+  } catch (error) {
+    console.error('下载结果失败:', error)
+    ElMessage.error(t('message.downloadFail'))
+  }
 }
 
 const goHome = () => {
+  // 重置所有数据和状态
   fileData.value = []
   results.value = []
   predicting.value = false
+  processing.value = false
+  processedData.value = null
+  currentFileName.value = ''
 }
 </script>
 

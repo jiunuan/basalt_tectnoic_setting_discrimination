@@ -1,12 +1,41 @@
 <template>
   <div class="data-display">
     <div class="table-header">
-      <h3>{{ t('preview.title') }}</h3>
+      <div class="header-left">
+        <h3>{{ t('preview.title') }}</h3>
+        <span v-if="filename" class="filename">{{ t('preview.currentFile') }}: {{ filename }}</span>
+      </div>
       <div class="header-buttons">
-        <el-button type="primary" @click="$emit('predict')" :loading="predicting">
+        <el-button 
+          type="primary" 
+          @click="$emit('process')" 
+          :loading="processing"
+          :disabled="predictions.length > 0 || processedData"
+          :icon="Histogram"
+          size="large"
+          class="action-button"
+        >
+          {{ processing ? t('message.processing') : t('preview.process') }}
+        </el-button>
+        <el-button 
+          type="success" 
+          @click="$emit('predict')" 
+          :loading="predicting"
+          :disabled="!processedData || predictions.length > 0"
+          :icon="DataAnalysis"
+          size="large"
+          class="action-button"
+        >
           {{ predicting ? t('preview.predicting') : t('preview.predict') }}
         </el-button>
-        <el-button type="success" @click="$emit('download')" :disabled="!predictions.length">
+        <el-button 
+          type="warning" 
+          @click="$emit('download')" 
+          :disabled="!predictions.length"
+          :icon="Download"
+          size="large"
+          class="action-button download-button"
+        >
           {{ t('preview.download') }}
         </el-button>
       </div>
@@ -17,6 +46,7 @@
       style="width: 100%" 
       border 
       max-height="360"
+      v-loading="processing || predicting"
     >
       <el-table-column
         v-for="(col, index) in COLUMNS_TO_EXTRACT"
@@ -63,6 +93,7 @@
 <script setup>
 import { watch, onMounted, ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { Histogram, DataAnalysis, Download } from '@element-plus/icons-vue'
 import { COLUMNS_TO_EXTRACT } from '../constants'
 import { useCharts } from '../composables/useCharts'
 
@@ -80,10 +111,22 @@ const props = defineProps({
   predicting: {
     type: Boolean,
     default: false
+  },
+  processing: {
+    type: Boolean,
+    default: false
+  },
+  processedData: {
+    type: Array,
+    default: () => []
+  },
+  filename: {
+    type: String,
+    default: ''
   }
 })
 
-const emit = defineEmits(['download', 'predict'])
+const emit = defineEmits(['download', 'predict', 'process'])
 
 const { pieChartRef, barChartRef, initCharts, updateCharts } = useCharts()
 
@@ -121,7 +164,6 @@ watch(() => t.value, () => {
 }, { immediate: false })
 
 onMounted(() => {
-  console.log('DataDisplay')
   initCharts()
 })
 </script>
@@ -138,6 +180,38 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
+  padding: 0 10px;
+}
+
+.header-buttons {
+  display: flex;
+  gap: 15px;
+}
+
+.action-button {
+  min-width: 140px;
+  font-weight: 600;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.action-button:not(:disabled):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.action-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.action-button :deep(.el-icon) {
+  font-size: 18px;
+  margin-right: 4px;
 }
 
 .charts-container {
@@ -176,8 +250,32 @@ onMounted(() => {
   margin-bottom: 20px;
 }
 
-.header-buttons {
+.header-left {
   display: flex;
-  gap: 10px;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.filename {
+  font-size: 14px;
+  color: #606266;
+}
+
+.download-button {
+  background: linear-gradient(145deg, #f7ba2c 0%, #ea942c 100%);
+  border: none;
+  color: white;
+}
+
+.download-button:hover:not(:disabled) {
+  background: linear-gradient(145deg, #ea942c 0%, #f7ba2c 100%);
+  border: none;
+  color: white;
+}
+
+.download-button:disabled {
+  background: #f5f7fa;
+  border: 1px solid #e4e7ed;
+  color: #c0c4cc;
 }
 </style> 

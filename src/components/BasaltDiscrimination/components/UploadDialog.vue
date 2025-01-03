@@ -49,84 +49,95 @@ const handleClose = () => {
   emit('update:visible', false)
 }
 
-const processFile = (file) => {
+const readFileAsText = (file) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = (e) => resolve(e.target.result)
+    reader.onerror = (e) => reject(e)
+    reader.readAsText(file)
+  })
+}
+
+const readFileAsArrayBuffer = (file) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = (e) => resolve(e.target.result)
+    reader.onerror = (e) => reject(e)
+    reader.readAsArrayBuffer(file)
+  })
+}
+
+const validateData = (data) => {
+  if (!data || !data.length) return false
+  
+  const isValid = data.every(row => {
+    if (!row || !Array.isArray(row)) return false
+    return row.length >= COLUMNS_TO_EXTRACT.length
+  })
+  
+  return isValid
+}
+
+const processFile = async (file) => {
   if (processingFile.value) return false
   if (lastProcessedFile.value === file) return false
   
   lastProcessedFile.value = file
   processingFile.value = true
 
-  const reader = new FileReader()
-  
-  reader.onload = (e) => {
-    try {
-      let rawData
-      if (file.raw.name.endsWith('.csv')) {
-        // 处理 CSV 文件
-        const text = e.target.result
-        const lines = text.split('\n')
-        rawData = lines
-          .filter(line => line.trim())
-          .map(line => line.split(',').map(cell => cell.trim()))
-      } else {
-        // 处理 Excel 文件
-        const workbook = XLSX.read(e.target.result, { type: 'array' })
-        const firstSheetName = workbook.SheetNames[0]
-        const worksheet = workbook.Sheets[firstSheetName]
-        rawData = XLSX.utils.sheet_to_json(worksheet, { header: 1 })
-      }
+  try {
+    const fileExt = file.raw.name.toLowerCase().split('.').pop()
+    let rawData = []
 
-      // 提取所需列
-      const headers = rawData[0]
-      const data = []
-      
-      // 找到需要提取的列的索引
-      const columnIndices = COLUMNS_TO_EXTRACT.map(col => headers.indexOf(col))
-      
-      // 检查是否所有需要的列都存在
-      if (columnIndices.some(index => index === -1)) {
-        throw new Error('缺少必要的列')
-      }
-
-      // 提取数据并转换为数值
-      for (let i = 1; i < rawData.length; i++) {
-        const row = rawData[i]
-        if (row && row.length) {
-          const extractedValues = columnIndices.map(index => {
-            const val = parseFloat(row[index])
-            return isNaN(val) ? 0 : val
-          })
-          data.push(extractedValues)
-        }
-      }
-      
-      emit('file-processed', data)
-      emit('update:visible', false)
-      ElMessage.success(t('message.uploadSuccess'))
-    } catch (error) {
-      console.error('文件处理错误:', error)
-      ElMessage.error(t('message.uploadFail'))
-    } finally {
-      processingFile.value = false
-      // 延迟清除lastProcessedFile，以防止快速重复上传同一文件
-      setTimeout(() => {
-        lastProcessedFile.value = null
-      }, 1000)
+    if (fileExt === 'csv') {
+      const text = await readFileAsText(file.raw)
+      rawData = text.split('\n')
+        .filter(line => line.trim())
+        .map(line => line.split(',').map(cell => cell.trim()))
+    } else if (fileExt === 'xlsx' || fileExt === 'xls') {
+      const buffer = await readFileAsArrayBuffer(file.raw)
+      const workbook = XLSX.read(buffer, { type: 'array' })
+      const firstSheet = workbook.Sheets[workbook.SheetNames[0]]
+      rawData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 })
     }
-  }
 
-  reader.onerror = () => {
-    processingFile.value = false
-    lastProcessedFile.value = null
+    const headers = rawData[0]
+    const data = []
+    
+    const columnIndices = COLUMNS_TO_EXTRACT.map(col => headers.indexOf(col))
+    
+    if (columnIndices.some(index => index === -1)) {
+      throw new Error('缺少必要的列')
+    }
+
+    for (let i = 1; i < rawData.length; i++) {
+      const row = rawData[i]
+      if (row && row.length) {
+        const extractedValues = columnIndices.map(index => {
+          const val = parseFloat(row[index])
+          return isNaN(val) ? 0 : val
+        })
+        data.push(extractedValues)
+      }
+    }
+
+    if (!validateData(data)) {
+      ElMessage.error(t('message.uploadFail'))
+      return
+    }
+
+    emit('file-processed', data, file.raw.name)
+    emit('update:visible', false)
+    ElMessage.success(t('message.uploadSuccess'))
+  } catch (error) {
+    console.error('文件处理错误:', error)
     ElMessage.error(t('message.uploadError'))
+  } finally {
+    processingFile.value = false
+    setTimeout(() => {
+      lastProcessedFile.value = null
+    }, 1000)
   }
-
-  if (file.raw.name.endsWith('.csv')) {
-    reader.readAsText(file.raw)
-  } else {
-    reader.readAsArrayBuffer(file.raw)
-  }
-  return false
 }
 
 const handleUpload = (file) => {
