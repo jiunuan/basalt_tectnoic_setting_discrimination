@@ -127,10 +127,11 @@ export function useCharts() {
         data: labels.reverse(),
         axisLabel: {
           fontSize: 16,
+          width: 200,   // 增加宽度
           color: '#333',
-          formatter: function(value) {
-            return value.length > 20 ? value.substring(0, 20) + '...' : value
-          }
+          // formatter: function(value) {
+          //   return value.length > 20 ? value.substring(0, 20) + '...' : value
+          // }
         }
       },
       series: [

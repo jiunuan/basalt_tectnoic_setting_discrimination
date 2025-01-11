@@ -376,7 +376,7 @@ const getTectonicSetting = (prediction) => {
     'Island arc',
     'OCEAN ISLAND',
     'OCEANIC PLATEAU',
-    'SPREADING_CENTER'
+    'Mid-Oceanic Ridge'
   ]
   
   // 获取最大概率的索引
@@ -392,7 +392,7 @@ const getTectonicSetting = (prediction) => {
     'Island arc': '岛弧',
     'OCEAN ISLAND': '洋岛',
     'OCEANIC PLATEAU': '洋底高原',
-    'SPREADING_CENTER': '扩张中心'
+    'Mid-Oceanic Ridge': '扩张中心'
   }
 
   const englishEnvironment = tectonic_settings[maxIndex]

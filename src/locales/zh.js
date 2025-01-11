@@ -35,7 +35,7 @@ export default {
     'Island arc': '岛弧',
     'OCEAN ISLAND': '洋岛',
     'OCEANIC PLATEAU': '洋底高原',
-    'SPREADING_CENTER': '扩张中心'
+    'Mid-Oceanic Ridge': '扩张中心'
   },
   message: {
     modelNotLoaded: '模型未加载，请稍后重试',
@@ -54,7 +54,10 @@ export default {
     processDataFirst: '请先处理数据再进行预测',
     noResults: '没有可下载的预测结果',
     downloadSuccess: '结果下载成功',
-    downloadFail: '结果下载失败'
+    downloadFail: '结果下载失败',
+    predicting: '正在预测构造环境...',
+    pleaseWait: '请耐心等待数据处理完成',
+    runningTime: '已运行时间'
   },
   welcome: {
     title: '欢迎使用玄武岩构造环境判别系统',
@@ -63,6 +66,18 @@ export default {
     step1: '上传包含玄武岩地球化学数据的CSV文件',
     step2: '检查数据并点击"开始预测"进行分析',
     step3: '查看图表结果并下载',
-    startButton: '开始使用'
+    startButton: '开始使用',
+    dataRequirements: {
+      title: '数据要求',
+      description: '请确保您的数据文件包含以下玄武岩样品的地球化学成分：',
+      columnsTitle: '必需的数据列：'
+    },
+    sampleData: {
+      title: '示例数据',
+      description: '下载示例数据文件以查看所需格式：',
+      example1: '示例1：弧后盆地样本',
+      example2: '示例2：格陵兰岛Isua样本',
+      example3: '示例3：Norseman&Kambalda样本'
+    }
   }
 } 

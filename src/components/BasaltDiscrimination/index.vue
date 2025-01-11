@@ -17,35 +17,80 @@
 
       <div v-if="!fileData.length" class="welcome-container">
         <div class="welcome-content">
-          <div class="welcome-header">
-            <h3>{{ t('welcome.title') }}</h3>
-            <p>{{ t('welcome.description') }}</p>
-            <div class="start-button-container">
-              <el-button type="primary" size="large" class="start-button pulse-button" @click="showUploadDialog = true">
-                <i class="el-icon-upload" />
-                {{ t('welcome.startButton') }}
-                <div class="button-effect"></div>
-              </el-button>
-            </div>
-          </div>
           <div class="welcome-main">
-            <img src="/tectonic.jpg" alt="Tectonic Settings" class="welcome-image" />
-            <div class="welcome-steps">
-              <div class="step-title">{{ t('welcome.stepsTitle') }}</div>
-              <ul>
-                <li>
-                  <span class="step-number">1</span>
-                  <span class="step-text">{{ t('welcome.step1') }}</span>
-                </li>
-                <li>
-                  <span class="step-number">2</span>
-                  <span class="step-text">{{ t('welcome.step2') }}</span>
-                </li>
-                <li>
-                  <span class="step-number">3</span>
-                  <span class="step-text">{{ t('welcome.step3') }}</span>
-                </li>
-              </ul>
+            <div class="welcome-left">
+              <div class="welcome-header-left">
+                <h3>{{ t('welcome.title') }}</h3>
+                <p>{{ t('welcome.description') }}</p>
+                <div class="start-button-container">
+                  <el-button type="primary" size="large" class="start-button pulse-button" @click="showUploadDialog = true">
+                    <i class="el-icon-upload" />
+                    {{ t('welcome.startButton') }}
+                    <div class="button-effect"></div>
+                  </el-button>
+                </div>
+              </div>
+              <div class="welcome-image-container">
+                <div class="image-section">
+                  <img src="/tectonic.jpg" alt="Tectonic Settings" class="welcome-image" />
+                </div>
+                <div class="steps-section">
+                  <div class="welcome-steps">
+                    <div class="step-title">{{ t('welcome.stepsTitle') }}</div>
+                    <ul>
+                      <li>
+                        <span class="step-number">1</span>
+                        <span class="step-text">{{ t('welcome.step1') }}</span>
+                      </li>
+                      <li>
+                        <span class="step-number">2</span>
+                        <span class="step-text">{{ t('welcome.step2') }}</span>
+                      </li>
+                      <li>
+                        <span class="step-number">3</span>
+                        <span class="step-text">{{ t('welcome.step3') }}</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="welcome-right">
+              <div class="data-requirements">
+                <h4>
+                  <el-icon class="info-icon"><info-filled /></el-icon>
+                  {{ t('welcome.dataRequirements.title') }}
+                </h4>
+                <p>{{ t('welcome.dataRequirements.description') }}</p>
+                <p class="columns-title">{{ t('welcome.dataRequirements.columnsTitle') }}</p>
+                <div class="columns-grid">
+                  <template v-for="(col, index) in COLUMNS_TO_EXTRACT" :key="index">
+                    <span class="column-name">{{ col }}</span>
+                  </template>
+                </div>
+              </div>
+
+              <div class="sample-data">
+                <h4>
+                  <el-icon class="download-icon"><download /></el-icon>
+                  {{ t('welcome.sampleData.title') }}
+                </h4>
+                <p>{{ t('welcome.sampleData.description') }}</p>
+                <div class="sample-files">
+                  <a href="/data/Back_arc_basin.csv" class="sample-file-link" download>
+                    <el-icon class="file-icon"><document /></el-icon>
+                    {{ t('welcome.sampleData.example1') }}
+                  </a>
+                  <a href="/data/Isua.csv" class="sample-file-link" download>
+                    <el-icon class="file-icon"><document /></el-icon>
+                    {{ t('welcome.sampleData.example2') }}
+                  </a>
+                  <a href="/data/Norseman&Kambalda.csv" class="sample-file-link" download>
+                    <el-icon class="file-icon"><document /></el-icon>
+                    {{ t('welcome.sampleData.example3') }}
+                  </a>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -63,6 +108,24 @@
         @predict="handlePredict"
         @process="handleProcessData"
       />
+
+      <div v-show="predicting || processing" class="loading-overlay">
+        <div class="loading-content">
+          <div class="loading-spinner">
+            <el-icon class="loading-icon"><loading /></el-icon>
+          </div>
+          <div class="loading-text">
+            {{ predicting ? t('message.predicting') : t('message.processing') }}
+          </div>
+          <div class="loading-timer">
+            <div class="timer-label">{{ t('message.runningTime') }}:</div>
+            <div class="timer-value">
+              {{ Math.floor(elapsedTime / 60).toString().padStart(2, '0') }}:{{ (elapsedTime % 60).toString().padStart(2, '0') }}
+            </div>
+          </div>
+          <div class="loading-subtext">{{ t('message.pleaseWait') }}</div>
+        </div>
+      </div>
     </el-card>
   </div>
 </template>
@@ -76,6 +139,7 @@ import DataDisplay from './components/DataDisplay.vue'
 import { ElMessage } from 'element-plus'
 import { useI18n } from 'vue-i18n'
 import LangSwitch from '../LangSwitch.vue'
+import { Loading, InfoFilled, Download, Document } from '@element-plus/icons-vue'
 
 import { COLUMNS_TO_EXTRACT, TECTONIC_SETTINGS, TECTONIC_SETTINGS_MAP } from './constants'
 
@@ -140,8 +204,51 @@ onMounted(async () => {
 
 const currentFileName = ref('')
 
+// 添加保存CSV的函数
+const saveDataToCSV = (data, filename) => {
+  try {
+    // 构建CSV内容
+    const csvContent = []
+    
+    // 添加列名
+    csvContent.push(COLUMNS_TO_EXTRACT.join(','))
+    
+    // 添加数据行
+    data.forEach(row => {
+      csvContent.push(row.join(','))
+    })
+
+    // 创建Blob对象
+    const blob = new Blob([csvContent.join('\n')], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    
+    // 设置下载文件名
+    const date = new Date().toISOString().slice(0, 10)
+    const baseFileName = filename.split('.').slice(0, -1).join('.')
+    link.setAttribute('href', url)
+    link.setAttribute('download', `${baseFileName}_processed_${date}.csv`)
+    
+    // 触发下载
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+
+    ElMessage.success('原始数据已保存为CSV文件')
+  } catch (error) {
+    console.error('保存CSV文件失败:', error)
+    ElMessage.error('保存CSV文件失败')
+  }
+}
+
 const handleFileProcessed = async (data, filename) => {
+  // console.log(data)
   currentFileName.value = filename
+  
+  // 保存原始数据为CSV
+  // saveDataToCSV(data, filename)
+  
   fileData.value = data.map(row => {
     const rowData = {}
     row.forEach((val, index) => {
@@ -151,27 +258,58 @@ const handleFileProcessed = async (data, filename) => {
   })
 }
 
+// 添加计时器ref
+const elapsedTime = ref(0)
+const timerInterval = ref(null)
+
+// 添加开始计时和停止计时的函数
+const startTimer = () => {
+  elapsedTime.value = 0
+  timerInterval.value = setInterval(() => {
+    elapsedTime.value++
+  }, 1000)
+}
+
+const stopTimer = () => {
+  if (timerInterval.value) {
+    clearInterval(timerInterval.value)
+    timerInterval.value = null
+  }
+  elapsedTime.value = 0
+}
+
+// 修改handlePredict函数
 const handlePredict = async () => {
+  console.log('开始预测')
+  predicting.value = true
+  startTimer()
+  
+  await new Promise(resolve => setTimeout(resolve, 0))
+  
   if (!model) {
     ElMessage.error(t('message.modelNotLoaded'))
+    predicting.value = false
+    stopTimer()
     return
   }
   
-  predicting.value = true
   try {
     if (!processedData.value) {
       ElMessage.error(t('message.processDataFirst'))
+      predicting.value = false
+      stopTimer()
       return
     }
 
     const imageData = convertToImageArray(processedData.value)
     await makePredictions(imageData)
-    ElMessage.closeAll()
+    ElMessage.success(t('message.predictSuccess'))
   } catch (error) {
     console.error('预测过程出错:', error)
     ElMessage.error(t('message.predictFail'))
   } finally {
     predicting.value = false
+    stopTimer()
   }
 }
 
@@ -183,18 +321,18 @@ const filterData = (data) => {
   let invalidCount = 0
   
   const filteredData = data.filter((sample, index) => {
-    // 检查无效值
-    // const zeroCount = sample.filter(val => val === 0 || val === null || isNaN(val)).length
-    // if (zeroCount > 16) {
-    //   console.log(`样本 ${index + 1} 有 ${zeroCount} 个无效值，已被过滤`)
-    //   invalidCount++
-    //   return false
-    // }
+    //检查无效值
+    const zeroCount = sample.filter(val => val === 0 || val === null || isNaN(val)).length
+    if (zeroCount > 16) {
+      // console.log(`样本 ${index + 1} 有 ${zeroCount} 个无效值，已被过滤`)
+      invalidCount++
+      return false
+    }
     
     // 检查重复值
     const sampleHash = sample.join(',')
     if (seen.has(sampleHash)) {
-      console.log(`样本 ${index + 1} 是重复数据，已被过滤`)
+      // console.log(`样本 ${index + 1} 是重复数据，已被过滤`)
       duplicateCount++
       return false
     }
@@ -228,7 +366,7 @@ const filterData = (data) => {
 const processedData = ref(null)
 const processing = ref(false)
 
-// 添加数据处理函数
+// 修改handleProcessData函数
 const handleProcessData = async () => {
   if (!fileData.value.length) {
     ElMessage.error(t('message.noData'))
@@ -236,6 +374,8 @@ const handleProcessData = async () => {
   }
 
   processing.value = true
+  startTimer()
+  
   const loadingMessage = ElMessage({
     message: t('message.processing'),
     type: 'info',
@@ -244,6 +384,7 @@ const handleProcessData = async () => {
 
   try {
     // 获取原始数据
+    console.log(fileData.value)
     const originalData = fileData.value.map(row =>
       COLUMNS_TO_EXTRACT.map(col => row['col' + COLUMNS_TO_EXTRACT.indexOf(col)])
     )
@@ -275,6 +416,7 @@ const handleProcessData = async () => {
     // 对筛选后的数据进行标准化
     const normalizedData = await processData(filteredData)
     processedData.value = normalizedData
+    // saveDataToCSV(normalizedData, 'Back-arc_Basin_normalized')
 
     // 更新表格数据，显示处理后的数据
     fileData.value = filteredData.map((row, index) => {
@@ -293,6 +435,7 @@ const handleProcessData = async () => {
     ElMessage.error(t('message.processFail'))
   } finally {
     processing.value = false
+    stopTimer()
   }
 }
 
@@ -337,23 +480,46 @@ const makePredictions = async (data) => {
   console.log('模型状态:', model)
 
   try {
-    // 将数据转换为正确的形状 [samples, 6, 6, 1]
-    const inputData = tf.tensor4d(data.map(sample => {
-      return Array.from(sample).map(val => [val]) // 添加通道维度
-        .reduce((rows, val, index) => {
-          const rowIndex = Math.floor(index / 6)
-          if (!rows[rowIndex]) rows[rowIndex] = []
-          rows[rowIndex].push(val)
-          return rows
-        }, [])
-    }))
+    // 添加一个微任务延迟，让UI有机会更新
+    await new Promise(resolve => setTimeout(resolve, 100))
 
-    // 进行预测
-    const predictions = await model.predict(inputData)
-    const predictionArray = await predictions.array()
+    // 将数据分批处理，每批100个样本
+    const batchSize = 100
+    const predictions = []
+    
+    for (let i = 0; i < data.length; i += batchSize) {
+      const batchData = data.slice(i, i + batchSize)
+      
+      // 转换当前批次的数据
+      const inputData = tf.tidy(() => {
+        return tf.tensor4d(batchData.map(sample => {
+          return Array.from(sample).map(val => [val])
+            .reduce((rows, val, index) => {
+              const rowIndex = Math.floor(index / 6)
+              if (!rows[rowIndex]) rows[rowIndex] = []
+              rows[rowIndex].push(val)
+              return rows
+            }, [])
+        }))
+      })
+
+      // 预测当前批次
+      const batchPredictions = await model.predict(inputData)
+      const batchArray = await batchPredictions.array()
+      predictions.push(...batchArray)
+
+      // 清理张量
+      inputData.dispose()
+      batchPredictions.dispose()
+
+      // 每处理完一批，添加微任务延迟
+      if (i + batchSize < data.length) {
+        await new Promise(resolve => setTimeout(resolve, 50))
+      }
+    }
 
     // 更新预测结果
-    results.value = predictionArray.map(pred => getTectonicSetting(pred))
+    results.value = predictions.map(pred => getTectonicSetting(pred))
 
     // 更新表格数据
     fileData.value = fileData.value.map((row, index) => ({
@@ -361,19 +527,9 @@ const makePredictions = async (data) => {
       prediction: results.value[index]
     }))
 
-    // 清理张量
-    inputData.dispose()
-    predictions.dispose()
-
-    // 显示成功消息
-    ElMessage({
-      message: t('message.predictSuccess'),
-      type: 'success',
-      duration: 3000
-    })
   } catch (error) {
     console.error('预测过程出错:', error)
-    ElMessage.error(t('message.predictFail'))
+    throw error
   }
 }
 
@@ -381,10 +537,11 @@ const makePredictions = async (data) => {
 const getTectonicSetting = (prediction) => {
   const maxIndex = prediction.indexOf(Math.max(...prediction))
   const englishEnvironment = TECTONIC_SETTINGS[maxIndex]
-  return TECTONIC_SETTINGS_MAP[englishEnvironment] || englishEnvironment
+  return englishEnvironment
+  // return TECTONIC_SETTINGS_MAP[englishEnvironment] || englishEnvironment
 }
 
-// 添加下载结果函数
+// 修改下载结果函数
 const downloadResults = () => {
   if (!results.value.length) {
     ElMessage.error(t('message.noResults'))
@@ -415,8 +572,10 @@ const downloadResults = () => {
     
     // 设置下载文件名
     const date = new Date().toISOString().slice(0, 10)
+    // 从原始文件名中去除后缀
+    const baseFileName = currentFileName.value.split('.').slice(0, -1).join('.')
     link.setAttribute('href', url)
-    link.setAttribute('download', `tectonic_predictions_${date}.csv`)
+    link.setAttribute('download', `${baseFileName}_tectonic_predictions_${date}.csv`)
     
     // 触发下载
     document.body.appendChild(link)
@@ -463,64 +622,88 @@ const goHome = () => {
   height: 100%;
   display: flex;
   justify-content: center;
+  align-items: flex-start;
   padding: 20px;
   background-color: #f8f9fa;
+  overflow: hidden;
 }
 
 .welcome-content {
-  max-width: 1200px;
   width: 100%;
+  height: 100%;
   display: flex;
   flex-direction: column;
+  padding: 20px;
+}
+
+.welcome-main {
+  display: flex;
   gap: 40px;
-  padding: 40px;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
 }
 
-.welcome-header {
-  text-align: center;
-  margin: 0 auto;
-  margin-bottom: 40px;
+.welcome-left {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
-.welcome-header h3 {
+.welcome-header-left {
+  text-align: left;
+}
+
+.welcome-header-left h3 {
   font-size: 32px;
   color: #303133;
   margin-bottom: 20px;
   font-weight: 600;
 }
 
-.welcome-header p {
+.welcome-header-left p {
   font-size: 18px;
   color: #606266;
   line-height: 1.6;
-  margin-bottom: 30px;
+  margin-bottom: 60px;
 }
 
-.welcome-main {
+.welcome-image-container {
   display: flex;
-  gap: 60px;
-  align-items: flex-start;
+  gap: 40px;
+  margin-top: 60px;
+}
+
+.image-section {
+  flex: 1;
+  max-width: 60%;
 }
 
 .welcome-image {
-  width: 60%;
+  width: 100%;
   height: auto;
   border-radius: 12px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
 
-.welcome-steps {
+.steps-section {
   flex: 1;
+  max-width: 40%;
+}
+
+.welcome-steps {
   background-color: white;
-  padding: 30px;
+  padding: 40px;
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  height: 100%;
 }
 
 .step-title {
   font-size: 24px;
   color: #303133;
-  margin-bottom: 30px;
+  margin-bottom: 60px;
   font-weight: 600;
 }
 
@@ -533,7 +716,7 @@ const goHome = () => {
 .welcome-steps li {
   font-size: 16px;
   color: #606266;
-  margin-bottom: 24px;
+  margin-bottom: 40px;
   padding-left: 40px;
   position: relative;
   display: flex;
@@ -560,6 +743,7 @@ const goHome = () => {
 }
 
 .start-button {
+  margin-left: 60px;
   padding: 12px 36px;
   font-size: 18px;
 }
@@ -571,10 +755,7 @@ const goHome = () => {
 }
 
 .start-button-container {
-  margin-top: 40px;
-  position: relative;
-  display: flex;
-  justify-content: center;
+  margin-top: 30px;
 }
 
 .start-button {
@@ -641,5 +822,240 @@ const goHome = () => {
   margin-right: 8px;
   font-size: 24px;
   vertical-align: middle;
+}
+
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.9);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  backdrop-filter: blur(4px);
+}
+
+.loading-content {
+  text-align: center;
+  padding: 40px;
+  border-radius: 16px;
+  background-color: white;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  min-width: 300px;
+}
+
+.loading-spinner {
+  width: 80px;
+  height: 80px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(45deg, #409eff20, #36cf7c20);
+  border-radius: 50%;
+  padding: 16px;
+}
+
+.loading-icon {
+  font-size: 48px;
+  color: #409eff;
+  animation: rotate 2s linear infinite;
+}
+
+.loading-text {
+  font-size: 20px;
+  color: #303133;
+  font-weight: 600;
+}
+
+.loading-timer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: monospace;
+  padding: 12px 20px;
+  border-radius: 8px;
+  border: 2px solid #ecf5ff;
+  background-color: #f8faff;
+}
+
+.timer-label {
+  font-size: 16px;
+  color: #606266;
+  font-weight: 500;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.timer-value {
+  font-size: 24px;
+  font-weight: bold;
+  background: linear-gradient(45deg, #409eff, #36cf7c);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  min-width: 70px;
+  text-align: center;
+}
+
+.loading-subtext {
+  font-size: 18px;
+  color: #909399;
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.sample-data {
+  height: 316.42px;
+  background-color: white;
+  padding: 24px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.sample-data h4 {
+  color: #303133;
+  font-size: 18px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.sample-data .download-icon {
+  color: #409eff;
+  font-size: 20px;
+}
+
+.sample-data p {
+  color: #606266;
+  font-size: 14px;
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+
+.sample-files {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sample-file-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background-color: #f5f7fa;
+  border-radius: 6px;
+  border: 1px solid #e4e7ed;
+  text-decoration: none;
+  color: #409eff;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.sample-file-link:hover {
+  background-color: #ecf5ff;
+  transform: translateX(4px);
+  border-color: #409eff;
+}
+
+.file-icon {
+  font-size: 18px;
+  color: #409eff;
+}
+
+.welcome-right {
+  width: 400px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+}
+
+.data-requirements {
+  background-color: #f4f9ff;
+  border-left: 4px solid #409eff;
+  border-radius: 8px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+}
+
+.data-requirements h4 {
+  color: #303133;
+  font-size: 18px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.data-requirements .info-icon {
+  color: #409eff;
+  font-size: 20px;
+}
+
+.data-requirements p {
+  color: #606266;
+  font-size: 14px;
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+
+.columns-title {
+  font-size: 15px;
+  color: #303133;
+  margin-bottom: 12px;
+  font-weight: 500;
+}
+
+.columns-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+  padding: 12px;
+  background-color: #ffffff;
+  border-radius: 6px;
+  border: 1px solid #e4e7ed;
+  margin-top: 10px;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.column-name {
+  font-size: 13px;
+  color: #409eff;
+  background-color: #ecf5ff;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #d9ecff;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: all 0.3s ease;
+}
+
+.column-name:hover {
+  background-color: #409eff;
+  color: white;
+  border-color: #409eff;
+  transform: translateY(-1px);
 }
 </style>

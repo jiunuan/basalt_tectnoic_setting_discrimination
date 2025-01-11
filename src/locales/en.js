@@ -35,7 +35,7 @@ export default {
     'Island arc': 'Island Arc',
     'OCEAN ISLAND': 'Ocean Island',
     'OCEANIC PLATEAU': 'Oceanic Plateau',
-    'SPREADING_CENTER': 'Spreading Center'
+    'Mid-Oceanic Ridge': 'Spreading Center'
   },
   message: {
     modelNotLoaded: 'Model not loaded, please try again later',
@@ -54,15 +54,30 @@ export default {
     processDataFirst: 'Please process the data before prediction',
     noResults: 'No prediction results available for download',
     downloadSuccess: 'Results downloaded successfully',
-    downloadFail: 'Failed to download results'
+    downloadFail: 'Failed to download results',
+    predicting: 'Predicting tectonic settings...',
+    pleaseWait: 'Please wait while we process your data',
+    runningTime: 'Running Time'
   },
   welcome: {
     title: 'Welcome to Basalt Tectonic Setting Discrimination System',
     description: 'This system helps you identify the tectonic setting of basalt samples based on their geochemical composition using deep learning technology.',
     stepsTitle: 'How it works',
-    step1: 'Upload your CSV file containing basalt geochemical data',
+    step1: 'Upload your file containing basalt geochemical data',
     step2: 'Review the data and click "Start Prediction" to analyze',
     step3: 'View the results in charts and download',
-    startButton: 'Get Started'
+    startButton: 'Get Started',
+    dataRequirements: {
+      title: 'Data Requirements',
+      description: 'Please ensure your data file contains the following geochemical components for basalt samples:',
+      columnsTitle: 'Required Columns:'
+    },
+    sampleData: {
+      title: 'Sample Data',
+      description: 'Download example data files to see the required format:',
+      example1: 'Example 1: Back-arc Basin Samples',
+      example2: 'Example 2: Isua Samples',
+      example3: 'Example 3: Norseman&Kambalda Samples'
+    }
   }
 } 

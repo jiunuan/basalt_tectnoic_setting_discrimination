@@ -17,7 +17,7 @@ export const TECTONIC_SETTINGS = [
   'Island arc',
   'OCEAN ISLAND',
   'OCEANIC PLATEAU',
-  'SPREADING_CENTER'
+  'Mid-Oceanic Ridge'
 ]
 
 export const TECTONIC_SETTINGS_MAP = {
@@ -29,5 +29,5 @@ export const TECTONIC_SETTINGS_MAP = {
   'Island arc': '岛弧',
   'OCEAN ISLAND': '洋岛',
   'OCEANIC PLATEAU': '洋底高原',
-  'SPREADING_CENTER': '弧后盆地'
+  'Mid-Oceanic Ridge': '弧后盆地'
 } 
