@@ -36,4 +36,8 @@ const handleCommand = (command) => {
   align-items: center;
   color: #606266;
 }
+
+.lang-switch:focus-visible {
+  outline: 0px;
+}
 </style>

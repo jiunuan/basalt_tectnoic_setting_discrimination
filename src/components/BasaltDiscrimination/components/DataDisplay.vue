@@ -45,7 +45,7 @@
       :data="paginatedData" 
       style="width: 100%" 
       border 
-      max-height="360"
+      max-height="280"
       v-loading="processing || predicting"
     >
       <el-table-column
@@ -128,6 +128,7 @@ const props = defineProps({
 
 const emit = defineEmits(['download', 'predict', 'process'])
 
+
 const { pieChartRef, barChartRef, initCharts, updateCharts } = useCharts()
 
 const paginatedData = computed(() => {
@@ -179,7 +180,7 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
   padding: 0 10px;
 }
 
@@ -223,9 +224,9 @@ onMounted(() => {
 .chart-item {
   flex: 1;
   min-height: 300px;
-  border: 1px solid #eee;
   border-radius: 4px;
   padding: 10px;
+  border: v-bind('predictions.length ? "1px solid #eee" : "none"');
 }
 
 .chart {
@@ -244,10 +245,10 @@ onMounted(() => {
 }
 
 .pagination-container {
-  margin-top: 20px;
+  margin-top: 10px;
   display: flex;
   justify-content: flex-end;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
 }
 
 .header-left {

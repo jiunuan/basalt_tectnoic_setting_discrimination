@@ -77,15 +77,15 @@
                 </h4>
                 <p>{{ t('welcome.sampleData.description') }}</p>
                 <div class="sample-files">
-                  <a href="/data/Back_arc_basin.csv" class="sample-file-link" download>
+                  <a :href="`${baseUrl}data/Back_arc_basin.csv`" class="sample-file-link" download="Back_arc_basin.csv">
                     <el-icon class="file-icon"><document /></el-icon>
                     {{ t('welcome.sampleData.example1') }}
                   </a>
-                  <a href="/data/Isua.csv" class="sample-file-link" download>
+                  <a :href="`${baseUrl}data/Isua.csv`" class="sample-file-link" download="Isua_sample.csv">
                     <el-icon class="file-icon"><document /></el-icon>
                     {{ t('welcome.sampleData.example2') }}
                   </a>
-                  <a href="/data/Norseman&Kambalda.csv" class="sample-file-link" download>
+                  <a :href="`${baseUrl}data/Norseman&Kambalda.csv`" class="sample-file-link" download="Norseman&Kambalda.csv">
                     <el-icon class="file-icon"><document /></el-icon>
                     {{ t('welcome.sampleData.example3') }}
                   </a>
@@ -117,12 +117,13 @@
           <div class="loading-text">
             {{ predicting ? t('message.predicting') : t('message.processing') }}
           </div>
-          <div class="loading-timer">
-            <div class="timer-label">{{ t('message.runningTime') }}:</div>
-            <div class="timer-value">
-              {{ Math.floor(elapsedTime / 60).toString().padStart(2, '0') }}:{{ (elapsedTime % 60).toString().padStart(2, '0') }}
-            </div>
-          </div>
+          <el-progress 
+            :percentage="progressPercentage" 
+            :stroke-width="10"
+            :show-text="false"
+            class="progress-bar"
+          />
+          <div class="progress-text">{{ progressPercentage }}%</div>
           <div class="loading-subtext">{{ t('message.pleaseWait') }}</div>
         </div>
       </div>
@@ -131,7 +132,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import * as tf from '@tensorflow/tfjs'
 import { normalizeData } from './composables/normalize';
 import UploadDialog from './components/UploadDialog.vue'
@@ -204,6 +205,12 @@ onMounted(async () => {
 
 const currentFileName = ref('')
 
+// 修改基础路径的计算属性
+const baseUrl = computed(() => {
+  const base = import.meta.env.BASE_URL || '/'
+  return base === '/' ? base : base + '/'
+})
+
 // 添加保存CSV的函数
 const saveDataToCSV = (data, filename) => {
   try {
@@ -258,38 +265,18 @@ const handleFileProcessed = async (data, filename) => {
   })
 }
 
-// 添加计时器ref
-const elapsedTime = ref(0)
-const timerInterval = ref(null)
+// 添加进度条相关的代码
+const progressPercentage = ref(0)
 
-// 添加开始计时和停止计时的函数
-const startTimer = () => {
-  elapsedTime.value = 0
-  timerInterval.value = setInterval(() => {
-    elapsedTime.value++
-  }, 1000)
-}
-
-const stopTimer = () => {
-  if (timerInterval.value) {
-    clearInterval(timerInterval.value)
-    timerInterval.value = null
-  }
-  elapsedTime.value = 0
-}
-
-// 修改handlePredict函数
+// 修改 handlePredict 函数
 const handlePredict = async () => {
   console.log('开始预测')
+  progressPercentage.value = 0
   predicting.value = true
-  startTimer()
-  
-  await new Promise(resolve => setTimeout(resolve, 0))
   
   if (!model) {
     ElMessage.error(t('message.modelNotLoaded'))
     predicting.value = false
-    stopTimer()
     return
   }
   
@@ -297,7 +284,6 @@ const handlePredict = async () => {
     if (!processedData.value) {
       ElMessage.error(t('message.processDataFirst'))
       predicting.value = false
-      stopTimer()
       return
     }
 
@@ -309,7 +295,7 @@ const handlePredict = async () => {
     ElMessage.error(t('message.predictFail'))
   } finally {
     predicting.value = false
-    stopTimer()
+    progressPercentage.value = 0
   }
 }
 
@@ -348,7 +334,7 @@ const filterData = (data) => {
         count: duplicateCount
       }),
       type: 'warning',
-      duration: 3000
+      duration: 1000
     })
   }
 
@@ -374,7 +360,7 @@ const handleProcessData = async () => {
   }
 
   processing.value = true
-  startTimer()
+  progressPercentage.value = 0
   
   const loadingMessage = ElMessage({
     message: t('message.processing'),
@@ -384,7 +370,7 @@ const handleProcessData = async () => {
 
   try {
     // 获取原始数据
-    console.log(fileData.value)
+    // console.log(fileData.value)
     const originalData = fileData.value.map(row =>
       COLUMNS_TO_EXTRACT.map(col => row['col' + COLUMNS_TO_EXTRACT.indexOf(col)])
     )
@@ -409,16 +395,17 @@ const handleProcessData = async () => {
           remaining: stats.remaining
         }),
         type: 'warning',
-        duration: 3000
+        duration: 1000
       })
     }
 
-    // 对筛选后的数据进行标准化
+    // 在处理过程中更新进度
+    progressPercentage.value = 30 // 数据筛选完成
     const normalizedData = await processData(filteredData)
+    progressPercentage.value = 70 // 数据标准化完成
     processedData.value = normalizedData
-    // saveDataToCSV(normalizedData, 'Back-arc_Basin_normalized')
-
-    // 更新表格数据，显示处理后的数据
+    
+    // 更新表格数据
     fileData.value = filteredData.map((row, index) => {
       const rowData = {}
       row.forEach((val, colIndex) => {
@@ -426,6 +413,7 @@ const handleProcessData = async () => {
       })
       return rowData
     })
+    progressPercentage.value = 100 // 处理完成
 
     loadingMessage.close()
     ElMessage.success(t('message.processSuccess'))
@@ -435,7 +423,7 @@ const handleProcessData = async () => {
     ElMessage.error(t('message.processFail'))
   } finally {
     processing.value = false
-    stopTimer()
+    progressPercentage.value = 0
   }
 }
 
@@ -469,28 +457,22 @@ const convertToImageArray = (data) => {
   return images
 }
 
-// 添加预测函数
+// 修改 makePredictions 函数
 const makePredictions = async (data) => {
   if (!model) {
     console.error('模型未加载')
     return
   }
 
-  console.log('当前 TensorFlow 后端:', tf.getBackend())
-  console.log('模型状态:', model)
-
   try {
-    // 添加一个微任务延迟，让UI有机会更新
-    await new Promise(resolve => setTimeout(resolve, 100))
-
-    // 将数据分批处理，每批100个样本
-    const batchSize = 100
+    const batchSize = Math.ceil(data.length / 100)
+    // const batchSize = 1
     const predictions = []
+    const totalBatches = Math.ceil(data.length / batchSize)
     
     for (let i = 0; i < data.length; i += batchSize) {
       const batchData = data.slice(i, i + batchSize)
       
-      // 转换当前批次的数据
       const inputData = tf.tidy(() => {
         return tf.tensor4d(batchData.map(sample => {
           return Array.from(sample).map(val => [val])
@@ -503,19 +485,15 @@ const makePredictions = async (data) => {
         }))
       })
 
-      // 预测当前批次
       const batchPredictions = await model.predict(inputData)
       const batchArray = await batchPredictions.array()
       predictions.push(...batchArray)
 
-      // 清理张量
       inputData.dispose()
       batchPredictions.dispose()
 
-      // 每处理完一批，添加微任务延迟
-      if (i + batchSize < data.length) {
-        await new Promise(resolve => setTimeout(resolve, 50))
-      }
+      // 更新进度
+      progressPercentage.value = Math.min(100, Math.round(((i + batchSize) / data.length) * 100))
     }
 
     // 更新预测结果
@@ -610,6 +588,12 @@ const goHome = () => {
 
 .main-card {
   height: 100%;
+  overflow: auto;
+}
+
+.main-card :deep(.el-card__body) {
+  /* padding: 0; */
+  padding-top: 0px;
 }
 
 .card-header {
@@ -681,6 +665,7 @@ const goHome = () => {
 }
 
 .welcome-image {
+  margin-top: 15px;
   width: 100%;
   height: auto;
   border-radius: 12px;
@@ -697,7 +682,7 @@ const goHome = () => {
   padding: 40px;
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  height: 100%;
+  height: 95%;
 }
 
 .step-title {
@@ -874,34 +859,6 @@ const goHome = () => {
   font-weight: 600;
 }
 
-.loading-timer {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-family: monospace;
-  padding: 12px 20px;
-  border-radius: 8px;
-  border: 2px solid #ecf5ff;
-  background-color: #f8faff;
-}
-
-.timer-label {
-  font-size: 16px;
-  color: #606266;
-  font-weight: 500;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-}
-
-.timer-value {
-  font-size: 24px;
-  font-weight: bold;
-  background: linear-gradient(45deg, #409eff, #36cf7c);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  min-width: 70px;
-  text-align: center;
-}
-
 .loading-subtext {
   font-size: 18px;
   color: #909399;
@@ -984,7 +941,7 @@ const goHome = () => {
   flex-direction: column;
   gap: 20px;
   max-height: calc(100vh - 200px);
-  overflow-y: auto;
+  /* overflow-y: auto; */
 }
 
 .data-requirements {
@@ -1057,5 +1014,16 @@ const goHome = () => {
   color: white;
   border-color: #409eff;
   transform: translateY(-1px);
+}
+
+.progress-bar {
+  width: 300px;
+  margin: 8px 0;
+}
+
+.progress-text {
+  font-size: 16px;
+  color: #409eff;
+  font-weight: 600;
 }
 </style>

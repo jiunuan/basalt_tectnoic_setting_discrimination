@@ -35,7 +35,7 @@ export default {
     'Island arc': 'Island Arc',
     'OCEAN ISLAND': 'Ocean Island',
     'OCEANIC PLATEAU': 'Oceanic Plateau',
-    'Mid-Oceanic Ridge': 'Spreading Center'
+    'Mid-Oceanic Ridge': 'Mid-Oceanic Ridge'
   },
   message: {
     modelNotLoaded: 'Model not loaded, please try again later',
